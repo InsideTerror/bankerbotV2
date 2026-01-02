@@ -101,7 +101,9 @@ async def load_extensions():
         'cogs.database',
         'cogs.unbelievaboat',
         'cogs.economy',
-        'cogs.admin'
+        'cogs.admin',
+        'cogs.transfer',
+        'cogs.broadcast'
     ]
     
     for extension in extensions:
