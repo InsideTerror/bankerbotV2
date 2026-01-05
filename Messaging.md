@@ -4,11 +4,12 @@ The broadcast system allows World Bank Officers to send messages to economy serv
 
 ## 🎯 Overview
 
-The system provides three types of broadcasts:
+The system provides five types of broadcasts:
 1. **Pending Applications** - Message servers with pending economy applications
 2. **Approved Servers** - Message all approved economy servers
-3. **All Servers** - Message all servers in the system (pending, approved, rejected)
-4. **Specific Server** - Message a single server by name (command-based)
+3. **All Economy Servers** - Message all servers in the economy system (pending, approved, rejected)
+4. **ALL Bot Servers** - Message every server the bot is in, regardless of economy status
+5. **Specific Server** - Message a single server by name (command-based)
 
 ## 🚀 Initial Setup
 
@@ -29,17 +30,26 @@ This will create three persistent message panels with buttons for each broadcast
 
 ### What Gets Created:
 
-1. **Three Message Panels** - Each with a button to create a broadcast ticket
+1. **Four Message Panels** - Each with a button to create a broadcast ticket
+   - Pending Applications (Orange)
+   - Approved Servers (Green)
+   - All Economy Servers (Blue)
+   - ALL Bot Servers (Red - use with caution!)
 2. **Broadcast Messages Storage** - Saved to `broadcast_messages.json`
 3. **Broadcast Log File** - All broadcasts logged to `broadcast_log.txt`
 
 ## 📝 How to Use
 
-### Using Ticket-Based Broadcasts (Pending/Approved/All)
+### Using Ticket-Based Broadcasts
 
 #### Step 1: Click the Button
 - Go to the Central Bank approval channel
-- Click the "Create Broadcast Ticket" button on the desired broadcast type
+- Choose the appropriate broadcast type:
+  - **Pending Applications** - Only servers with pending economy applications
+  - **Approved Servers** - Only approved economy servers
+  - **All Economy Servers** - All servers in the economy (pending, approved, rejected)
+  - **ALL Bot Servers** - ⚠️ EVERY server the bot is in (use sparingly!)
+- Click the "Create Broadcast Ticket" button
 - A new private channel will be created for you
 
 #### Step 2: Compose Your Message
@@ -163,10 +173,11 @@ All broadcasts are logged to `broadcast_log.txt` with:
    - Include action items if needed
 
 2. **Choose the Right Target**
-   - Pending: For application-related communication
-   - Approved: For economy participants
-   - All: For critical system-wide announcements
-   - Specific: For individual server matters
+   - **Pending:** For application-related communication
+   - **Approved:** For economy participants only
+   - **All Economy:** For everyone who has applied (any status)
+   - **ALL Bot Servers:** For critical announcements to every server (⚠️ use sparingly!)
+   - **Specific:** For individual server matters
 
 3. **Timing Matters**
    - Avoid broadcasting during off-peak hours
