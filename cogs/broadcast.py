@@ -125,40 +125,59 @@ class BroadcastSystem(commands.Cog):
         )
         approved_embed.set_footer(text="World Bank Officer only")
         
-        all_embed = discord.Embed(
-            title="📧 Broadcast to All Servers",
+        all_economy_embed = discord.Embed(
+            title="📧 Broadcast to All Economy Servers",
             description=(
                 "Click the button below to open a ticket and send a message to "
                 "**all servers** in the economy system (pending, approved, and rejected).\n\n"
                 "Perfect for:\n"
-                "• Major announcements\n"
-                "• Bot maintenance notices\n"
-                "• Critical updates"
+                "• Economy system announcements\n"
+                "• Application process updates\n"
+                "• Important policy changes"
             ),
             color=discord.Color.blue()
         )
-        all_embed.set_footer(text="World Bank Officer only")
+        all_economy_embed.set_footer(text="World Bank Officer only")
+        
+        all_guilds_embed = discord.Embed(
+            title="📧 Broadcast to ALL Bot Servers",
+            description=(
+                "Click the button below to open a ticket and send a message to "
+                "**every server the bot is in**, regardless of economy status.\n\n"
+                "Perfect for:\n"
+                "• Critical bot maintenance notices\n"
+                "• Major feature announcements\n"
+                "• Emergency updates\n\n"
+                "⚠️ **Use sparingly** - This reaches ALL servers!"
+            ),
+            color=discord.Color.red()
+        )
+        all_guilds_embed.set_footer(text="World Bank Officer only • Use with caution")
         
         # Send messages with buttons
         pending_view = BroadcastButtonView(self, 'pending')
         approved_view = BroadcastButtonView(self, 'approved')
-        all_view = BroadcastButtonView(self, 'all')
+        all_economy_view = BroadcastButtonView(self, 'all_economy')
+        all_guilds_view = BroadcastButtonView(self, 'all_guilds')
         
         pending_msg = await channel.send(embed=pending_embed, view=pending_view)
         approved_msg = await channel.send(embed=approved_embed, view=approved_view)
-        all_msg = await channel.send(embed=all_embed, view=all_view)
+        all_economy_msg = await channel.send(embed=all_economy_embed, view=all_economy_view)
+        all_guilds_msg = await channel.send(embed=all_guilds_embed, view=all_guilds_view)
         
         # Store message IDs
         self.broadcast_messages['pending'] = pending_msg.id
         self.broadcast_messages['approved'] = approved_msg.id
-        self.broadcast_messages['all'] = all_msg.id
+        self.broadcast_messages['all_economy'] = all_economy_msg.id
+        self.broadcast_messages['all_guilds'] = all_guilds_msg.id
         self.save_message_ids()
         
         await ctx.send(
             f"✅ Broadcast system setup complete!\n\n"
             f"**Pending Applications:** {pending_msg.jump_url}\n"
             f"**Approved Servers:** {approved_msg.jump_url}\n"
-            f"**All Servers:** {all_msg.jump_url}"
+            f"**All Economy Servers:** {all_economy_msg.jump_url}\n"
+            f"**ALL Bot Servers:** {all_guilds_msg.jump_url}"
         )
     
     # ========================================================================
@@ -204,14 +223,23 @@ class BroadcastSystem(commands.Cog):
                             ),
                             color=discord.Color.green()
                         )
-                    else:  # all
+                    elif broadcast_type == 'all_economy':
                         embed = discord.Embed(
-                            title="📧 Broadcast to All Servers",
+                            title="📧 Broadcast to All Economy Servers",
                             description=(
                                 "Click the button below to open a ticket and send a message to "
                                 "**all servers** in the economy system."
                             ),
                             color=discord.Color.blue()
+                        )
+                    else:  # all_guilds
+                        embed = discord.Embed(
+                            title="📧 Broadcast to ALL Bot Servers",
+                            description=(
+                                "Click the button below to open a ticket and send a message to "
+                                "**every server the bot is in**."
+                            ),
+                            color=discord.Color.red()
                         )
                     
                     embed.set_footer(text="World Bank Officer only")
@@ -279,18 +307,26 @@ class BroadcastSystem(commands.Cog):
         
         # Get recipient count
         db = self.get_db()
-        if broadcast_type == 'all':
+        
+        if broadcast_type == 'all_guilds':
+            recipient_count = len(self.bot.guilds)
+            recipients_desc = "ALL servers the bot is in"
+        elif broadcast_type == 'all_economy':
             recipients = await db.get_all_economies()
+            recipient_count = len(recipients)
+            recipients_desc = "All economy servers (pending, approved, rejected)"
         else:
             recipients = await db.get_all_economies(broadcast_type)
+            recipient_count = len(recipients)
+            recipients_desc = f"{broadcast_type.capitalize()} servers"
         
         # Send welcome message
         embed = discord.Embed(
-            title=f"📧 Broadcast Ticket: {broadcast_type.capitalize()}",
+            title=f"📧 Broadcast Ticket: {broadcast_type.replace('_', ' ').title()}",
             description=(
                 f"Welcome to your broadcast ticket!\n\n"
-                f"**Target:** {broadcast_type.capitalize()} servers\n"
-                f"**Recipients:** {len(recipients)} server(s)\n\n"
+                f"**Target:** {recipients_desc}\n"
+                f"**Recipients:** {recipient_count} server(s)\n\n"
                 f"**Instructions:**\n"
                 f"1. Type your message in this channel\n"
                 f"2. The bot will ask you to confirm\n"
@@ -299,7 +335,15 @@ class BroadcastSystem(commands.Cog):
             ),
             color=discord.Color.blue()
         )
-        embed.set_footer(text="Use /close_ticket to cancel and close this ticket")
+        
+        if broadcast_type == 'all_guilds':
+            embed.add_field(
+                name="⚠️ Warning",
+                value="This will message EVERY server the bot is in, including those not in the economy!",
+                inline=False
+            )
+        
+        embed.set_footer(text="Use !close_ticket to cancel and close this ticket")
         
         await ticket_channel.send(embed=embed)
         
@@ -330,15 +374,22 @@ class BroadcastSystem(commands.Cog):
         ticket_data['message_content'] = message.content
         ticket_data['awaiting_confirmation'] = True
         
-        # Send confirmation
+        # Get recipients
         db = self.get_db()
         broadcast_type = ticket_data['type']
         
-        if broadcast_type == 'all':
+        if broadcast_type == 'all_guilds':
+            # Get ALL guilds bot is in
+            recipients = [
+                {'guild_id': guild.id, 'guild_name': guild.name, 'status': 'bot_member'}
+                for guild in self.bot.guilds
+            ]
+        elif broadcast_type == 'all_economy':
             recipients = await db.get_all_economies()
         else:
             recipients = await db.get_all_economies(broadcast_type)
         
+        # Send confirmation
         embed = discord.Embed(
             title="✅ Confirm Broadcast",
             description="Please confirm that you want to send this message:",
@@ -346,7 +397,7 @@ class BroadcastSystem(commands.Cog):
         )
         embed.add_field(
             name="Target",
-            value=f"{broadcast_type.capitalize()} servers",
+            value=broadcast_type.replace('_', ' ').title(),
             inline=True
         )
         embed.add_field(
@@ -362,8 +413,8 @@ class BroadcastSystem(commands.Cog):
         
         # List some recipient servers
         server_list = "\n".join([
-            f"• {economy['guild_name']}"
-            for economy in recipients[:10]
+            f"• {r['guild_name']}"
+            for r in recipients[:10]
         ])
         if len(recipients) > 10:
             server_list += f"\n*...and {len(recipients) - 10} more*"
@@ -373,6 +424,13 @@ class BroadcastSystem(commands.Cog):
             value=server_list,
             inline=False
         )
+        
+        if broadcast_type == 'all_guilds':
+            embed.add_field(
+                name="⚠️ Warning",
+                value="This includes servers NOT in the economy system!",
+                inline=False
+            )
         
         view = ConfirmBroadcastView(self, message.channel.id, recipients)
         await message.channel.send(embed=embed, view=view)
@@ -388,6 +446,7 @@ class BroadcastSystem(commands.Cog):
         
         ticket_data = self.active_tickets[channel_id]
         message_content = ticket_data['message_content']
+        broadcast_type = ticket_data['type']
         
         ticket_channel = self.bot.get_channel(channel_id)
         if not ticket_channel:
@@ -406,12 +465,12 @@ class BroadcastSystem(commands.Cog):
         failed_count = 0
         failed_servers = []
         
-        for economy in recipients:
+        for recipient in recipients:
             try:
-                guild = self.bot.get_guild(economy['guild_id'])
+                guild = self.bot.get_guild(recipient['guild_id'])
                 if not guild:
                     failed_count += 1
-                    failed_servers.append(f"{economy['guild_name']} (Bot not in server)")
+                    failed_servers.append(f"{recipient['guild_name']} (Bot not in server)")
                     continue
                 
                 # Try to find a suitable channel
@@ -436,7 +495,7 @@ class BroadcastSystem(commands.Cog):
                 
                 if not target_channel:
                     failed_count += 1
-                    failed_servers.append(f"{economy['guild_name']} (No accessible channel)")
+                    failed_servers.append(f"{recipient['guild_name']} (No accessible channel)")
                     continue
                 
                 # Send message
@@ -455,15 +514,15 @@ class BroadcastSystem(commands.Cog):
                 await asyncio.sleep(0.5)
                 
             except Exception as e:
-                logger.error(f'Failed to send to {economy["guild_name"]}: {e}')
+                logger.error(f'Failed to send to {recipient["guild_name"]}: {e}')
                 failed_count += 1
-                failed_servers.append(f"{economy['guild_name']} (Error: {str(e)[:50]})")
+                failed_servers.append(f"{recipient['guild_name']} (Error: {str(e)[:50]})")
         
         # Log the broadcast
         self.log_broadcast(
             ticket_data['officer_id'],
             ticket_data['officer_name'],
-            ticket_data['type'],
+            broadcast_type,
             message_content,
             sent_count
         )
