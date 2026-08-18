@@ -1,5 +1,14 @@
 # 🏦 BankerBot - Global Economy Bridge
 
+[Python](https://img.shields.io/badge/Python-3.11+-blue)
+![Discord.py](https://img.shields.io/badge/Discord.py-2.4-blueviolet)
+![!License CC BY-NC 4.0](https://img.shields.io/badge/License-CC_20BY_NC_204.0-green)
+![Static Badge](https://img.shields.io/badge/Unbelievaboat_API_Version-v1-yellow)
+![Static Badge](https://img.shields.io/badge/Bot_Status-Online-green)
+![Static Badge](https://img.shields.io/badge/Discord_version-stable_482285-red)
+![Static Badge](https://img.shields.io/badge/SQLite_Version-3.50.-white)
+![Static Badge](https://img.shields.io/badge/Async_IO_Version-4.0.0-orange)
+
 A Discord bot that enables cross-server currency transfers using UnbelievaBoat API.
 
 ## 📋 Features
