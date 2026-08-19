@@ -25,8 +25,8 @@ A Discord bot that enables cross-server currency transfers using UnbelievaBoat A
 1. **Clone or download this repository**
 
 ```bash
-git clone https://github.com/yourusername/bankerbot.git
-cd bankerbot
+git clone https://github.com/InsideTerror/bankerbotV2.git
+cd bankerbotV2
 ```
 
 2. **Create a virtual environment** (recommended)
