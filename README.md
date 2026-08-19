@@ -58,6 +58,7 @@ OWNER_USER_ID = 1234567890  # Your Discord user ID
 - Enable Developer Mode in Discord (User Settings → Advanced → Developer Mode)
 - Right-click on server/channel/user → Copy ID
 
+
 5. **Run the bot**
 
 ```bash
