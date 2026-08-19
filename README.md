@@ -1,14 +1,5 @@
 # 🏦 BankerBot - Global Economy Bridge
 
-![Static Badge](https://img.shields.io/badge/Python-3.11+-blue)
-![Discord.py](https://img.shields.io/badge/Discord.py-2.4-blueviolet)
-![!License CC BY-NC 4.0](https://img.shields.io/badge/License-CC_20BY_NC_204.0-green)
-![Static Badge](https://img.shields.io/badge/Unbelievaboat_API_Version-v1-yellow)
-![Static Badge](https://img.shields.io/badge/Bot_Status-Online-green)
-![Static Badge](https://img.shields.io/badge/Discord_version-stable_594503-red)
-![Static Badge](https://img.shields.io/badge/SQLite_Version-3.50.-white)
-![Static Badge](https://img.shields.io/badge/Async_IO_Version-4.0.0-orange)
-
 A Discord bot that enables cross-server currency transfers using UnbelievaBoat API.
 
 ## 📋 Features
@@ -111,6 +102,9 @@ bankerbot/
 |---------|-------------|
 | `/kick_economy` | Remove a server from the global economy |
 | `/cleanup_transfers` | Delete old transfer logs |
+| `/setup_broadcast` | Initialize the broadcast panels (owner only, Central Bank server) |
+| `/broadcast_server` | Send a message to one specific server |
+| `/close_ticket` | Close the current broadcast ticket |
 
 ### For Bot Owner (via DM)
 
@@ -127,14 +121,15 @@ Send these commands as DMs to the bot:
 
 - [ ] Create application at https://discord.com/developers/applications
 - [ ] Create bot and copy token
-- [ ] Enable these Privileged Gateway Intents:
-  - Server Members Intent
-  - Message Content Intent
+- [ ] No privileged Gateway Intents are required — this bot runs entirely on
+      default (non-privileged) intents. Leave **Server Members Intent** and
+      **Message Content Intent** OFF in the Developer Portal.
 - [ ] Invite bot with these permissions:
   - Send Messages
   - Embed Links
   - Read Message History
   - Use Slash Commands
+  - Manage Channels (needed for broadcast ticket channels)
 
 ### 2. UnbelievaBoat Setup
 

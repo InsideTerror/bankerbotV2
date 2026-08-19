@@ -18,10 +18,10 @@ The system provides five types of broadcasts:
 In your Central Bank server's approval channel, run:
 
 ```
-!setup_broadcast
+/setup_broadcast
 ```
 
-This will create three persistent message panels with buttons for each broadcast type.
+This will create four persistent message panels with buttons for each broadcast type.
 
 **Requirements:**
 - Must be run by the bot owner
@@ -53,9 +53,9 @@ This will create three persistent message panels with buttons for each broadcast
 - A new private channel will be created for you
 
 #### Step 2: Compose Your Message
-- The bot will greet you with instructions
-- Simply type your message in the ticket channel
-- The message can be as long as you need
+- The bot will greet you with instructions and a **Compose Message** button
+- Click it to open a form (modal) and type your message there
+- The message can be as long as you need (up to 4000 characters)
 
 #### Step 3: Confirm and Send
 - The bot will show you a confirmation with:
@@ -64,7 +64,7 @@ This will create three persistent message panels with buttons for each broadcast
   - Preview of your message
   - List of recipient servers
 - Click "Confirm & Send" to broadcast
-- Or click "Cancel" to write a new message
+- Or click "Cancel" to open the compose form again and write a new message
 
 #### Step 4: Automatic Cleanup
 - The bot sends your message to all target servers
@@ -73,21 +73,21 @@ This will create three persistent message panels with buttons for each broadcast
 
 ### Using Specific Server Broadcast (Command)
 
-For sending to a single specific server, use the command:
+For sending to a single specific server, use the slash command:
 
 ```
-!broadcast_server "Server Name" Your message content here
+/broadcast_server server_name:"Server Name" message:Your message content here
 ```
 
 **Examples:**
 ```
-!broadcast_server "Medieval Kingdom" Hello! This is a test message.
+/broadcast_server server_name:"Medieval Kingdom" message:Hello! This is a test message.
 
-!broadcast_server "Space Station RP" We have updated our economy policies, please review them.
+/broadcast_server server_name:"Space Station RP" message:We have updated our economy policies, please review them.
 ```
 
 **Notes:**
-- Server name must be in quotes
+- `server_name` has autocomplete to help you pick the right server
 - Server name is case-insensitive
 - Message is sent immediately without confirmation
 - Still logged to broadcast_log.txt
@@ -151,9 +151,9 @@ All broadcasts are logged to `broadcast_log.txt` with:
 
 | Command | Description | Usage |
 |---------|-------------|-------|
-| `!setup_broadcast` | Initialize the broadcast system | `!setup_broadcast` |
-| `!broadcast_server` | Send to specific server | `!broadcast_server "Name" message` |
-| `!close_ticket` | Close current broadcast ticket | `!close_ticket` |
+| `/setup_broadcast` | Initialize the broadcast system | `/setup_broadcast` |
+| `/broadcast_server` | Send to specific server | `/broadcast_server server_name:"Name" message:text` |
+| `/close_ticket` | Close current broadcast ticket | `/close_ticket` |
 
 ### Button Actions
 
@@ -204,7 +204,7 @@ All broadcasts are logged to `broadcast_log.txt` with:
 ## 🔍 Troubleshooting
 
 ### Broadcast panels disappeared
-**Solution:** Run `!setup_broadcast` again to recreate them
+**Solution:** Run `/setup_broadcast` again to recreate them
 
 ### Can't create ticket
 **Possible causes:**
@@ -223,7 +223,7 @@ All broadcasts are logged to `broadcast_log.txt` with:
 **Check:** The completion report shows which servers failed and why
 
 ### Ticket won't close
-**Solution:** Use `!close_ticket` command or wait for auto-deletion after broadcast
+**Solution:** Use `/close_ticket` command or wait for auto-deletion after broadcast
 
 ### Messages not in right channel
 **Note:** Bot automatically selects best available channel. Server admins can rename channels to influence selection:
@@ -269,7 +269,7 @@ Both files are automatically created on first use.
 1. **Officer wants to message just "Space Station RP"**
 2. **Types in any channel:**
    ```
-   !broadcast_server "Space Station RP" Thank you for updating your application! Your economy has been approved.
+   /broadcast_server server_name:"Space Station RP" message:Thank you for updating your application! Your economy has been approved.
    ```
 3. **Bot immediately sends message**
 4. **Officer gets confirmation**

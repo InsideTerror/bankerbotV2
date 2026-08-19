@@ -9,11 +9,11 @@ import sys
 # ============================================================================
 # CONFIGURATION - UPDATE THESE VALUES
 # ============================================================================
-DISCORD_TOKEN = "YOUR_DISCORD_BOT_TOKEN_HERE"
-UNB_API_KEY = "YOUR_UNBELIEVABOAT_API_KEY_HERE"
-CENTRAL_BANK_SERVER_ID = 1234567890  # Replace with your Central Bank server ID
-APPROVAL_CHANNEL_ID = 1234567890  # Replace with approval channel ID
-OWNER_USER_ID = 1234567890  # Your Discord user ID for managing officers
+DISCORD_TOKEN = "YOUR_DISCORD_BOT_TOKEN"  # Replace with your discord bot's token
+UNB_API_KEY = "YOUR_UNB_API_KEY"  # Replace with your Unbelievaboat API key
+CENTRAL_BANK_SERVER_ID = "YOUR_CENTRAL_BANK_SERVER_ID"  # Replace with your Central Bank server ID
+APPROVAL_CHANNEL_ID = "YOUR_APPROVAL_CHANNEL_ID"  # Replace with approval channel ID
+OWNER_USER_ID = "YOUR_OWNER_USER_ID"  # Your Discord user ID for managing officers
 
 # ============================================================================
 # LOGGING SETUP
@@ -31,10 +31,18 @@ logger = logging.getLogger('BankerBot')
 # ============================================================================
 # BOT SETUP
 # ============================================================================
+# NOTE: This bot intentionally uses ONLY non-privileged intents.
+# - Message Content Intent is NOT enabled. Officer DM commands (add/remove/list
+#   officer, officer help) still work because Discord always includes content
+#   for direct messages sent to the bot, regardless of this intent. Broadcast
+#   ticket messages are composed via a Modal (see cogs/broadcast.py) instead
+#   of being typed and read from on_message, so they don't need it either.
+# - Server Members Intent is NOT enabled. The bot never needs a full member
+#   list; the few places that looked up a user by ID now fall back to an API
+#   fetch (discord.Client.fetch_user) when the user isn't already cached.
+# Since there are no more prefix ("!") commands left that rely on reading
+# message content, the prefix is effectively unused but harmless to keep.
 intents = discord.Intents.default()
-intents.message_content = True
-intents.members = True
-intents.guilds = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
