@@ -153,7 +153,13 @@ class AdminCommands(commands.Cog):
     
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        """Listen for DMs to add/remove officers."""
+        """Listen for DMs to add/remove officers.
+
+        This does NOT require the privileged Message Content Intent: Discord
+        always sends full message content for direct messages to the bot,
+        even without that intent enabled. It's only guild channel messages
+        (where the bot isn't mentioned) that get their content stripped.
+        """
         # Only process DMs to the bot
         if not isinstance(message.channel, discord.DMChannel):
             return
@@ -215,6 +221,17 @@ class AdminCommands(commands.Cog):
             officer_list = []
             for officer in officers:
                 user = self.bot.get_user(officer['user_id'])
+                if not user:
+                    # Without Members Intent the user may not be cached yet;
+                    # fetch it directly from the API instead.
+                    try:
+                        user = await self.bot.fetch_user(officer['user_id'])
+                    except discord.NotFound:
+                        user = None
+                    except discord.HTTPException as e:
+                        logger.warning(f'Failed to fetch user {officer["user_id"]}: {e}')
+                        user = None
+
                 if user:
                     officer_list.append(f"• {user.mention} ({user.id})")
                 else:

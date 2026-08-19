@@ -81,20 +81,21 @@ class BroadcastSystem(commands.Cog):
     # SETUP BROADCAST BUTTONS
     # ========================================================================
     
-    @commands.command(name='setup_broadcast')
-    async def setup_broadcast(self, ctx):
+    @discord.app_commands.command(name="setup_broadcast", description="[OWNER] Initialize the broadcast panels in this channel")
+    async def setup_broadcast(self, interaction: discord.Interaction):
         """Setup the broadcast button messages in the World Bank server."""
         # Check if user is owner
-        if ctx.author.id != self.bot.config['owner_user_id']:
-            await ctx.send("❌ Only the bot owner can use this command.")
+        if interaction.user.id != self.bot.config['owner_user_id']:
+            await interaction.response.send_message("❌ Only the bot owner can use this command.", ephemeral=True)
             return
         
         # Check if we're in the Central Bank server
-        if ctx.guild.id != self.bot.config['central_bank_server_id']:
-            await ctx.send("❌ This command can only be used in the Central Bank server.")
+        if not interaction.guild or interaction.guild.id != self.bot.config['central_bank_server_id']:
+            await interaction.response.send_message("❌ This command can only be used in the Central Bank server.", ephemeral=True)
             return
         
-        channel = ctx.channel
+        await interaction.response.defer(ephemeral=True)
+        channel = interaction.channel
         
         # Create embeds for each broadcast type
         pending_embed = discord.Embed(
@@ -172,12 +173,13 @@ class BroadcastSystem(commands.Cog):
         self.broadcast_messages['all_guilds'] = all_guilds_msg.id
         self.save_message_ids()
         
-        await ctx.send(
+        await interaction.followup.send(
             f"✅ Broadcast system setup complete!\n\n"
             f"**Pending Applications:** {pending_msg.jump_url}\n"
             f"**Approved Servers:** {approved_msg.jump_url}\n"
             f"**All Economy Servers:** {all_economy_msg.jump_url}\n"
-            f"**ALL Bot Servers:** {all_guilds_msg.jump_url}"
+            f"**ALL Bot Servers:** {all_guilds_msg.jump_url}",
+            ephemeral=True
         )
     
     # ========================================================================
@@ -328,10 +330,9 @@ class BroadcastSystem(commands.Cog):
                 f"**Target:** {recipients_desc}\n"
                 f"**Recipients:** {recipient_count} server(s)\n\n"
                 f"**Instructions:**\n"
-                f"1. Type your message in this channel\n"
+                f"1. Click **Compose Message** below and type your message in the form\n"
                 f"2. The bot will ask you to confirm\n"
-                f"3. Once confirmed, your message will be sent to all target servers\n\n"
-                f"Type your message now:"
+                f"3. Once confirmed, your message will be sent to all target servers"
             ),
             color=discord.Color.blue()
         )
@@ -343,35 +344,26 @@ class BroadcastSystem(commands.Cog):
                 inline=False
             )
         
-        embed.set_footer(text="Use !close_ticket to cancel and close this ticket")
+        embed.set_footer(text="Use /close_ticket to cancel and close this ticket")
         
-        await ticket_channel.send(embed=embed)
+        await ticket_channel.send(embed=embed, view=ComposeMessageView(self, ticket_channel.id))
         
         return ticket_channel
     
     # ========================================================================
-    # MESSAGE LISTENER
+    # MESSAGE COMPOSITION (via Modal — no Message Content Intent needed)
     # ========================================================================
     
-    @commands.Cog.listener()
-    async def on_message(self, message: discord.Message):
-        """Listen for messages in ticket channels."""
-        # Ignore bot messages
-        if message.author.bot:
-            return
-        
-        # Check if this is a ticket channel
-        if message.channel.id not in self.active_tickets:
-            return
-        
-        ticket_data = self.active_tickets[message.channel.id]
-        
-        # If already awaiting confirmation, ignore new messages
-        if ticket_data['awaiting_confirmation']:
+    async def handle_composed_message(self, interaction: discord.Interaction,
+                                       channel_id: int, content: str):
+        """Process a message submitted through the compose modal."""
+        ticket_data = self.active_tickets.get(channel_id)
+        if not ticket_data:
+            await interaction.response.send_message("❌ This ticket is no longer active.", ephemeral=True)
             return
         
         # Store the message
-        ticket_data['message_content'] = message.content
+        ticket_data['message_content'] = content
         ticket_data['awaiting_confirmation'] = True
         
         # Get recipients
@@ -407,7 +399,7 @@ class BroadcastSystem(commands.Cog):
         )
         embed.add_field(
             name="Message",
-            value=message.content[:1000] + ("..." if len(message.content) > 1000 else ""),
+            value=content[:1000] + ("..." if len(content) > 1000 else ""),
             inline=False
         )
         
@@ -432,8 +424,8 @@ class BroadcastSystem(commands.Cog):
                 inline=False
             )
         
-        view = ConfirmBroadcastView(self, message.channel.id, recipients)
-        await message.channel.send(embed=embed, view=view)
+        view = ConfirmBroadcastView(self, channel_id, recipients)
+        await interaction.response.send_message(embed=embed, view=view)
     
     # ========================================================================
     # SEND BROADCAST
@@ -564,16 +556,22 @@ class BroadcastSystem(commands.Cog):
     # SPECIFIC SERVER BROADCAST (Command-based)
     # ========================================================================
     
-    @commands.command(name='broadcast_server')
-    async def broadcast_server(self, ctx, server_name: str, *, message: str):
+    @discord.app_commands.command(name="broadcast_server", description="[OFFICER] Send a message to one specific server")
+    @discord.app_commands.describe(
+        server_name="Name of the server to message",
+        message="The message content to send"
+    )
+    async def broadcast_server(self, interaction: discord.Interaction, server_name: str, message: str):
         """
         Broadcast a message to a specific server.
-        Usage: !broadcast_server "Server Name" Your message here
+        Usage: /broadcast_server server_name:"Server Name" message:Your message here
         """
         # Check permissions
-        if not await self.is_officer_or_owner(ctx.author.id):
-            await ctx.send("❌ You are not authorized to use this command.")
+        if not await self.is_officer_or_owner(interaction.user.id):
+            await interaction.response.send_message("❌ You are not authorized to use this command.", ephemeral=True)
             return
+        
+        await interaction.response.defer(ephemeral=True)
         
         db = self.get_db()
         
@@ -587,13 +585,13 @@ class BroadcastSystem(commands.Cog):
                 break
         
         if not target_economy:
-            await ctx.send(f"❌ Server '{server_name}' not found in the economy system.")
+            await interaction.followup.send(f"❌ Server '{server_name}' not found in the economy system.", ephemeral=True)
             return
         
         # Get the guild
         guild = self.bot.get_guild(target_economy['guild_id'])
         if not guild:
-            await ctx.send(f"❌ Bot is not in the server '{server_name}'.")
+            await interaction.followup.send(f"❌ Bot is not in the server '{server_name}'.", ephemeral=True)
             return
         
         # Find a channel
@@ -614,7 +612,7 @@ class BroadcastSystem(commands.Cog):
                     break
         
         if not target_channel:
-            await ctx.send(f"❌ No accessible channel found in '{server_name}'.")
+            await interaction.followup.send(f"❌ No accessible channel found in '{server_name}'.", ephemeral=True)
             return
         
         # Send the message
@@ -631,40 +629,62 @@ class BroadcastSystem(commands.Cog):
             
             # Log it
             self.log_broadcast(
-                ctx.author.id,
-                str(ctx.author),
+                interaction.user.id,
+                str(interaction.user),
                 f"specific: {server_name}",
                 message,
                 1
             )
             
-            await ctx.send(f"✅ Message sent to **{server_name}** in {target_channel.mention}")
+            await interaction.followup.send(f"✅ Message sent to **{server_name}** in {target_channel.mention}", ephemeral=True)
             
         except Exception as e:
-            await ctx.send(f"❌ Failed to send message: {e}")
+            await interaction.followup.send(f"❌ Failed to send message: {e}", ephemeral=True)
+    
+    @broadcast_server.autocomplete('server_name')
+    async def broadcast_server_autocomplete(
+        self,
+        interaction: discord.Interaction,
+        current: str
+    ):
+        """Autocomplete for server name."""
+        if not await self.is_officer_or_owner(interaction.user.id):
+            return []
+        
+        db = self.get_db()
+        if not db:
+            return []
+        
+        economies = await db.get_all_economies()
+        filtered = [e for e in economies if current.lower() in e['guild_name'].lower()]
+        
+        return [
+            discord.app_commands.Choice(name=e['guild_name'], value=e['guild_name'])
+            for e in filtered[:25]
+        ]
     
     # ========================================================================
     # CLOSE TICKET COMMAND
     # ========================================================================
     
-    @commands.command(name='close_ticket')
-    async def close_ticket(self, ctx):
+    @discord.app_commands.command(name="close_ticket", description="Close the current broadcast ticket")
+    async def close_ticket(self, interaction: discord.Interaction):
         """Close the current broadcast ticket."""
-        if ctx.channel.id not in self.active_tickets:
-            await ctx.send("❌ This is not a broadcast ticket channel.")
+        if interaction.channel_id not in self.active_tickets:
+            await interaction.response.send_message("❌ This is not a broadcast ticket channel.", ephemeral=True)
             return
         
-        ticket_data = self.active_tickets[ctx.channel.id]
+        ticket_data = self.active_tickets[interaction.channel_id]
         
-        if ctx.author.id != ticket_data['officer_id']:
-            await ctx.send("❌ Only the officer who created this ticket can close it.")
+        if interaction.user.id != ticket_data['officer_id']:
+            await interaction.response.send_message("❌ Only the officer who created this ticket can close it.", ephemeral=True)
             return
         
-        await ctx.send("🗑️ Closing ticket in 3 seconds...")
+        await interaction.response.send_message("🗑️ Closing ticket in 3 seconds...")
         await asyncio.sleep(3)
         
-        del self.active_tickets[ctx.channel.id]
-        await ctx.channel.delete(reason="Ticket closed by officer")
+        del self.active_tickets[interaction.channel_id]
+        await interaction.channel.delete(reason="Ticket closed by officer")
 
 async def setup(bot):
     await bot.add_cog(BroadcastSystem(bot))
@@ -705,6 +725,58 @@ class BroadcastButtonView(discord.ui.View):
             f"✅ Broadcast ticket created: {ticket_channel.mention}",
             ephemeral=True
         )
+
+class ComposeMessageView(discord.ui.View):
+    """View shown in a ticket channel prompting the officer to compose their message via a Modal."""
+
+    def __init__(self, cog, channel_id: int):
+        super().__init__(timeout=None)
+        self.cog = cog
+        self.channel_id = channel_id
+
+    @discord.ui.button(label="Compose Message", style=discord.ButtonStyle.primary, emoji="✍️")
+    async def compose(self, interaction: discord.Interaction, button: discord.ui.Button):
+        ticket_data = self.cog.active_tickets.get(self.channel_id)
+        if not ticket_data:
+            await interaction.response.send_message("❌ This ticket is no longer active.", ephemeral=True)
+            return
+
+        if interaction.user.id != ticket_data['officer_id']:
+            await interaction.response.send_message(
+                "❌ Only the officer who created this ticket can compose the message.",
+                ephemeral=True
+            )
+            return
+
+        if ticket_data['awaiting_confirmation']:
+            await interaction.response.send_message(
+                "❌ A message is already awaiting confirmation. Confirm or cancel it first.",
+                ephemeral=True
+            )
+            return
+
+        await interaction.response.send_modal(BroadcastMessageModal(self.cog, self.channel_id))
+
+
+class BroadcastMessageModal(discord.ui.Modal, title="Compose Broadcast Message"):
+    """Modal used to compose a broadcast message without needing Message Content Intent."""
+
+    message_input = discord.ui.TextInput(
+        label="Message",
+        style=discord.TextStyle.paragraph,
+        placeholder="Type the message to broadcast...",
+        max_length=4000,
+        required=True
+    )
+
+    def __init__(self, cog, channel_id: int):
+        super().__init__()
+        self.cog = cog
+        self.channel_id = channel_id
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await self.cog.handle_composed_message(interaction, self.channel_id, self.message_input.value)
+
 
 class ConfirmBroadcastView(discord.ui.View):
     """View for confirming broadcast."""
@@ -762,9 +834,15 @@ class ConfirmBroadcastView(discord.ui.View):
         ticket_data['awaiting_confirmation'] = False
         ticket_data['message_content'] = None
         
-        await interaction.response.send_message("❌ Broadcast cancelled. You can type a new message.", ephemeral=True)
+        await interaction.response.send_message("❌ Broadcast cancelled.", ephemeral=True)
         
         # Disable buttons
         for item in self.children:
             item.disabled = True
         await interaction.message.edit(view=self)
+        
+        # Let them compose a new message
+        await interaction.channel.send(
+            "You can compose a new message below:",
+            view=ComposeMessageView(self.cog, self.channel_id)
+        )
